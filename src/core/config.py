@@ -17,7 +17,7 @@ class AppBaseSettings(BaseSettings):
 class RedisSettings(AppBaseSettings):
     """Настройки подключения к Redis."""
 
-    model_config = SettingsConfigDict(env_prefix="redis_")
+    model_config = SettingsConfigDict(env_prefix="REDIS_")
 
     uri: str | None = None
     host: str = Field(min_length=1)
@@ -35,7 +35,7 @@ class RedisSettings(AppBaseSettings):
 class PsqlSettings(AppBaseSettings):
     """Настройки подключения к PostgreSQL."""
 
-    model_config = SettingsConfigDict(env_prefix="postgres_")
+    model_config = SettingsConfigDict(env_prefix="POSTGRES_")
 
     uri: str | None = None
     host: str = Field(min_length=1)
@@ -67,7 +67,7 @@ class PsqlSettings(AppBaseSettings):
 class Settings(AppBaseSettings):
     """Настройки приложения."""
 
-    analyze_service_url: str
+    analyze_service_url: str = ""
 
     redis: RedisSettings = Field(default_factory=RedisSettings)
     postgres: PsqlSettings = Field(default_factory=PsqlSettings)
