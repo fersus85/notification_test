@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from enum import Enum as PyEnum
 from typing import Optional
 
 from sqlalchemy import Enum, Index, String, Text, func
@@ -8,19 +7,7 @@ from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.db import Base
-
-
-class NotificationCategory(PyEnum):
-    INFO = "info"
-    WARNING = "warning"
-    CRITICAL = "critical"
-
-
-class ProcessingStatus(PyEnum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
+from src.schemas.enums import NotificationCategory, ProcessingStatus
 
 
 class Notification(Base):
