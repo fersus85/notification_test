@@ -2,7 +2,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.exc import (
     DataError,
     IntegrityError,
@@ -10,6 +10,7 @@ from sqlalchemy.exc import (
     SQLAlchemyError,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from src.core.exceptions import (
     NotificationRepositoryError,
@@ -27,7 +28,7 @@ class NotificationRepository:
     с поддержкой фильтрации и пагинации.
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession | Session):
         """Инициализация репозитория с асинхронной сессией."""
         self.session = session
 
@@ -64,18 +65,19 @@ class NotificationRepository:
         logger.info("Created notification %s", notification.id)
         return notification
 
-    async def read(
+    async def update(
         self,
         notification_id: uuid.UUID,
+        update_data: dict,
     ) -> Notification | None:
         async with self._transaction_handler("Failed read notification"):
             result = await self.session.execute(
                 update(Notification)
                 .where(Notification.id == notification_id)
-                .values(read_at=func.now())
+                .values(**update_data)
                 .returning(Notification)
             )
-            return result.scalar_one_or_none()
+        return result.scalar_one_or_none()
 
     async def get_by_id(self, notific_id: uuid.UUID) -> Notification | None:
         """Получает уведомление по идентификатору."""
@@ -83,10 +85,10 @@ class NotificationRepository:
             result = await self.session.execute(
                 select(Notification).where(Notification.id == notific_id)
             )
-            return result.scalar_one_or_none()
         except SQLAlchemyError as exc:
-            logger.error("Failed to get notification %s: %s", notific_id, exc)
-            raise NotificationRepositoryError("Failed get notificat") from exc
+            logger.error("Failed to get note %s: %s", notific_id, exc)
+            raise NotificationRepositoryError("Fail get note") from exc
+        return result
 
     async def list(
         self,
@@ -107,3 +109,23 @@ class NotificationRepository:
         query = query.offset(filters.offset).limit(filters.limit)
         result = await self.session.execute(query)
         return result.scalars().all()
+
+    def sync_get_by_id(self, notific_id) -> Notification | None:
+        result = self.session.execute(
+            select(Notification).where(Notification.id == notific_id)
+        )
+        return result.scalars().one_or_none()
+
+    def sync_update(
+        self,
+        notification_id: uuid.UUID,
+        update_data: dict,
+    ) -> Notification | None:
+        result = self.session.execute(
+            update(Notification)
+            .where(Notification.id == notification_id)
+            .values(**update_data)
+            .returning(Notification)
+        )
+        self.session.commit()
+        return result.scalar_one_or_none()
