@@ -1,15 +1,24 @@
+import logging
 import uuid
 from typing import Any
+
+from sqlalchemy import func
 
 from src.models.notification import Notification
 from src.repositories.notification_repo import NotificationRepository
 from src.schemas.filters import NotificationFilter
+from src.tasks.analyze import analyze_notification
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationService:
     """Сервис для работы с уведомлениями."""
 
-    def __init__(self, repo: NotificationRepository) -> None:
+    def __init__(
+        self,
+        repo: NotificationRepository,
+    ) -> None:
         self.repo = repo
 
     async def create_notification(
@@ -22,7 +31,12 @@ class NotificationService:
             user_id=user_id, title=title, text=text
         )
         created = await self.repo.create(new_notification)
-        # вызов Celery-задачи для анализа уведомления
+
+        try:
+            analyze_notification.delay(created.id, text)
+            logger.info(f"Task queued for notification {created.id}")
+        except Exception as exc:
+            logger.error(f"Failed queue task notification {created.id}: {exc}")
         return created
 
     async def list_notifications(
@@ -48,7 +62,9 @@ class NotificationService:
         """
         Отмечает уведомление как прочитанное, обновляя поле read_at.
         """
-        notification = await self.repo.read(notification_id)
+        notification = await self.repo.update(
+            notification_id, {"read_at": func.now()}
+        )
         if not notification:
             return None
         return notification
