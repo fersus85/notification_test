@@ -37,6 +37,7 @@ class PsqlSettings(AppBaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="POSTGRES_")
 
+    sync_uri: str | None = None
     uri: str | None = None
     host: str = Field(min_length=1)
     port: int = Field(default=5432, ge=1, le=65535)
@@ -49,12 +50,27 @@ class PsqlSettings(AppBaseSettings):
     max_overflow: int = 10
 
     @computed_field
-    def db_uri(self) -> str:
-        """URI для подключения к PostgreSQL."""
+    def db_async_uri(self) -> str:
+        """URI для асинхронного подключения к PostgreSQL."""
         if self.uri:
             return self.uri
         dsn = MultiHostUrl.build(
             scheme="postgresql+asyncpg",
+            username=self.user,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            path=self.db,
+        )
+        return str(dsn)
+
+    @computed_field
+    def db_sync_uri(self) -> str:
+        """URI для синхронного подключения к PostgreSQL."""
+        if self.uri:
+            return self.uri
+        dsn = MultiHostUrl.build(
+            scheme="postgresql+psycopg2",
             username=self.user,
             password=self.password,
             host=self.host,
