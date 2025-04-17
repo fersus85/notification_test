@@ -12,6 +12,7 @@ from sqlalchemy.exc import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from src.core.cache import CacheManager
 from src.core.exceptions import (
     NotificationRepositoryError,
 )
@@ -31,6 +32,7 @@ class NotificationRepository:
     def __init__(self, session: AsyncSession | Session):
         """Инициализация репозитория с асинхронной сессией."""
         self.session = session
+        self.cache = CacheManager()
 
     @asynccontextmanager
     async def _transaction_handler(self, error_message: str):
@@ -77,10 +79,16 @@ class NotificationRepository:
                 .values(**update_data)
                 .returning(Notification)
             )
+            cache_key = f"notification:{notification_id}"
+            await self.cache.delete(cache_key)
         return result.scalar_one_or_none()
 
     async def get_by_id(self, notific_id: uuid.UUID) -> Notification | None:
         """Получает уведомление по идентификатору."""
+        cache_key = f"notification:{notific_id}"
+        cached_data = await self.cache.get(cache_key)
+        if cached_data:
+            return cached_data
         try:
             result = await self.session.execute(
                 select(Notification).where(Notification.id == notific_id)
@@ -88,7 +96,11 @@ class NotificationRepository:
         except SQLAlchemyError as exc:
             logger.error("Failed to get note %s: %s", notific_id, exc)
             raise NotificationRepositoryError("Fail get note") from exc
-        return result
+
+        notification = result.scalar_one_or_none()
+        if notification:
+            await self.cache.set(cache_key, notification, ttl=100)
+        return notification
 
     async def list(
         self,
