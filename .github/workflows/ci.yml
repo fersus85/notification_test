@@ -1,0 +1,65 @@
+name: CI for UGC
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies with uv
+        run: uv sync
+
+      - name: Run flake8 and generate HTML report
+        id: flake8
+        run: |
+          uv run flake8 --format=html --htmldir=flake8-report
+        continue-on-error: true
+
+      - name: Upload flake8 report
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake8-report-${{ github.run_id }}
+          path: flake8-report/
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies with uv
+        run: uv sync
+
+      - name: Run tests with pytest
+        id: tests
+        run: uv run pytest
