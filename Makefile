@@ -1,4 +1,4 @@
-.PHONY: up install install-dev lint format down help
+.PHONY: up install install-dev lint format down help db/migrate db/downgrade
 
 SRC_DIR = $(CURDIR)/src
 
@@ -27,6 +27,14 @@ install-dev:
 	@echo "Установка зависимостей..."
 	@pip install -r requirements-dev.txt
 
+# Миграции
+db/migrate:
+	@docker compose exec fastapi uv run alembic upgrade head
+
+# Откат миграции
+db/downgrade:
+	@docker compose exec fastapi uv run alembic downgrade base
+
 # Линтинг
 lint:
 	@echo "Запуск линтинга..."
@@ -45,5 +53,7 @@ help:
 	@echo "  make down                - Остановка сервиса и очиска"
 	@echo "  make install             - Установка зависимостей"
 	@echo "  make install-dev         - Установка зависимостей для разработки"
+	@echo "  make db/migrate          - Миграция alembic"
+	@echo "  make db/downgrade        - Откат миграции alembic"
 	@echo "  make lint                - Запуск линтера"
 	@echo "  make format              - Автоформатирование кода"
