@@ -18,6 +18,7 @@ dependencies = [
     "celery[redis]>=5.4.0",
     "orjson>=3.10.16",
     "psycopg2-binary>=2.9.10",
+    "gunicorn>=23.0.0",
 ]
 
 [dependency-groups]
