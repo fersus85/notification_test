@@ -1,0 +1,69 @@
+name: notification
+
+services:
+
+  redis:
+    image: redis:7.4.1
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - ./redisdata:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:16
+    env_file:
+      - ./.env
+    volumes:
+      - notification_data_volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d mydatabase" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: always
+
+  fastapi:
+    image: fastapi-notification
+    build:
+      context: .
+      target: service
+    env_file:
+      - ./.env
+    volumes:
+      - fastapi_log_volume:/app/logs/
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: curl -s http://fastapi:8000/api/openapi >/dev/null || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      target: worker
+    image: notification-celery
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+
+
+volumes:
+  notification_data_volume:
+  fastapi_log_volume:
