@@ -7,7 +7,7 @@ from sqlalchemy import func
 from src.models.notification import Notification
 from src.repositories.notification_repo import NotificationRepository
 from src.schemas.filters import NotificationFilter
-from src.tasks.analyze import analyze_notification
+from src.tasks.task_analyze import analyze_notification
 
 logger = logging.getLogger(__name__)
 

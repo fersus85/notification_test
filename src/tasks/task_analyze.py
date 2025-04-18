@@ -1,16 +1,16 @@
 import logging
 from uuid import UUID
 
-from src.core.celery_conf.task import celery
+from src.celery_app import app_celery
 from src.core.db import get_sync_db_session
 from src.repositories.notification_repo import NotificationRepository
 from src.schemas.enums import ProcessingStatus
-from src.tasks.mock_ai_service import AIService
+from src.services.mock_ai_service import AIService
 
 logger = logging.getLogger(__name__)
 
 
-@celery.task(name="analyze_notification")
+@app_celery.task
 def analyze_notification(notification_id: UUID, text: str):
     """
     Задача для анализа уведомления.
