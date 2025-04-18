@@ -20,7 +20,7 @@ class RedisSettings(AppBaseSettings):
     model_config = SettingsConfigDict(env_prefix="REDIS_")
 
     uri: str | None = None
-    host: str = Field(min_length=1)
+    host: str = Field(default="redis", min_length=1)
     port: int = Field(default=6379, ge=1, le=65535)
     max_connections: int = 100
 
@@ -39,11 +39,11 @@ class PsqlSettings(AppBaseSettings):
 
     sync_uri: str | None = None
     uri: str | None = None
-    host: str = Field(min_length=1)
+    host: str = Field(default="postgres", min_length=1)
     port: int = Field(default=5432, ge=1, le=65535)
-    user: str = Field(min_length=1)
-    password: str = Field(min_length=1)
-    db: str = Field(min_length=1)
+    user: str = Field(default="user", min_length=1)
+    password: str = Field(default="strong", min_length=1)
+    db: str = Field(default="db", min_length=1)
 
     echo: bool = False
     pool_size: int = 20
